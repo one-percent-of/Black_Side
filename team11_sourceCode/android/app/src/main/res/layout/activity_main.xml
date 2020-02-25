@@ -1,0 +1,104 @@
+<?xml version="1.0" encoding="utf-8"?>
+<RelativeLayout xmlns:android="http://schemas.android.com/apk/res/android"
+xmlns:tools="http://schemas.android.com/tools"
+android:layout_width="match_parent"
+android:layout_height="match_parent"
+android:paddingBottom="@dimen/activity_vertical_margin"
+android:paddingLeft="@dimen/activity_horizontal_margin"
+android:paddingRight="@dimen/activity_horizontal_margin"
+android:paddingTop="@dimen/activity_vertical_margin"
+tools:context="com.example.summer.afinal.MainActivity">
+
+
+    <Button
+    android:layout_width="150dp"
+    android:layout_height="60dp"
+    android:id="@+id/button3"
+    android:text="Camera 확인"
+    android:layout_alignParentTop="true"
+    android:layout_alignParentEnd="true"
+    android:background="#65f02d2d"
+    android:textStyle="bold" />
+
+<TextView
+    android:layout_width="120dp"
+    android:layout_height="50dp"
+    android:textAppearance="?android:attr/textAppearanceMedium"
+    android:id="@+id/outputL"
+    android:layout_below="@+id/button3"
+    android:layout_alignParentEnd="true"
+    android:layout_marginTop="10dp"
+    android:layout_alignParentStart="false"
+    android:background="#65f02d2d"
+    android:gravity="center"
+    android:textAlignment="center" />
+
+<TextView
+    android:layout_width="120dp"
+    android:layout_height="50dp"
+    android:textAppearance="?android:attr/textAppearanceMedium"
+    android:id="@+id/outputR"
+    android:background="#65f02d2d"
+    android:layout_below="@+id/outputL"
+    android:layout_alignStart="@+id/outputL"
+    android:layout_marginTop="10dp"
+    android:textAlignment="center"
+    android:gravity="center" />
+
+<TextView
+    android:layout_width="120dp"
+    android:layout_height="50dp"
+    android:textAppearance="?android:attr/textAppearanceMedium"
+    android:text="LEFT 진동"
+    android:id="@+id/textView3"
+    android:layout_alignTop="@+id/outputL"
+    android:layout_toStartOf="@+id/button3"
+    android:background="#65f02d2d"
+    android:textAlignment="center"
+    android:gravity="center"
+    android:textStyle="bold" />
+
+<TextView
+    android:layout_width="120dp"
+    android:layout_height="50dp"
+    android:textAppearance="?android:attr/textAppearanceMedium"
+    android:text="Light 진동"
+    android:id="@+id/textView4"
+    android:background="#65f02d2d"
+    android:layout_alignTop="@+id/outputR"
+    android:layout_alignStart="@+id/textView3"
+    android:textAlignment="center"
+    android:linksClickable="false"
+    android:gravity="center"
+    android:textStyle="bold" />
+
+<TextView
+    android:layout_width="match_parent"
+    android:layout_height="50dp"
+    android:layout_marginTop="10dp"
+    android:textAppearance="?android:attr/textAppearanceMedium"
+    android:id="@+id/textView"
+    android:layout_below="@+id/outputR"
+    android:layout_alignParentEnd="true"
+    android:background="#65f02d2d"
+    android:gravity="center"
+    android:textAlignment="center"
+    android:text="차량이 무사합니다" />
+
+<ImageView
+    android:layout_width="200dp"
+    android:layout_height="200dp"
+    android:id="@+id/imageView"
+    android:layout_alignParentBottom="true"
+    android:layout_centerHorizontal="true" />
+
+    <Button
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="진동값받아오기"
+        android:background="#65f02d2d"
+        android:id="@+id/btn"
+        android:layout_alignParentTop="true"
+        android:layout_alignParentStart="true" />
+
+</RelativeLayout>

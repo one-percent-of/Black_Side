@@ -1,0 +1,2 @@
+arm-none-linux-gnueabi-gcc -o main main.c ledtest.c ledtest.h cledtest.c cledtest.h oledtest.c oledtest.h mledtest.c mledtest.h fndtest.c fndtest.h tlcdtest.c tlcdtest.h dipswtest.c dipswtest.h keytest.c keytest.h buzzertest.c buzzertest.h bitmap.c bitmap.h touchapp.c touchapp.h camera.c camera.h SecBuffer.h videodev2.h -pthread -lrt
+

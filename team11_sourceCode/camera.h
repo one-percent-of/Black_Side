@@ -1,0 +1,63 @@
+#ifndef __CAMERA_H__
+#define __CAMERA_H__
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>     // for open/close
+#include <fcntl.h>      // for O_RDWR
+#include <sys/ioctl.h>  // for ioctl
+#include <sys/mman.h>
+#include <sys/ipc.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <sys/poll.h>
+#include <errno.h>
+#include <string.h>
+#include <linux/fb.h>
+#include <linux/videodev2.h>
+#include <ctype.h>
+#include <fcntl.h>
+//#include "bitmap.h"
+#include "videodev2.h"
+#include "bitmap.h"
+
+#define CHECK(return_value)                                          \
+    if (return_value < 0) {                                          \
+        printf("%s::%d fail. errno: %s, m_camera_id = %d\n",             \
+             __func__, __LINE__, strerror(errno), 0);      \
+        return -1;                                                   \
+    }
+#define CHECK_PTR(return_value)                                      \
+    if (return_value < 0) {                                          \
+        printf("%s::%d fail, errno: %s, m_camera_id = %d\n",             \
+             __func__,__LINE__, strerror(errno), 0);       \
+        return NULL;                                                 \
+    }
+#define CAMERA_PREVIEW_WIDTH       640
+#define CAMERA_PREVIEW_HEIGHT      480
+#define MAX_BUFFERS     8
+#define MAX_PLANES      (1)
+#define V4L2_BUF_TYPE				V4L2_BUF_TYPE_VIDEO_CAPTURE
+#define PREVIEW_NUM_PLANE (1)
+#define V4L2_MEMORY_TYPE V4L2_MEMORY_MMAP
+#define CAMERA_DEV_NAME   "/dev/video0"
+#define PREVIEW_MODE 1
+
+enum scenario_mode {
+    IS_MODE_PREVIEW_STILL,
+    IS_MODE_PREVIEW_VIDEO,
+    IS_MODE_CAPTURE_STILL,
+    IS_MODE_CAPTURE_VIDEO,
+    IS_MODE_MAX
+};
+
+int bmp_generator(char *filename, int width, int height, RGBQUAD * data);
+int FrameInit(int* afb_fd, struct fb_var_screeninfo* afbvar,struct fb_fix_screeninfo* afbfix);
+int startPreview(void);
+int stopPreview(void);
+int CreateCamera(int index);
+void initScreen(unsigned char *fb_mem);
+int camera(unsigned char *buffer, int d_x, int d_y);
+int camera1();
+int camera2();
+
+#endif

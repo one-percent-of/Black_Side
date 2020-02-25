@@ -1,0 +1,446 @@
+#include <stdio.h>
+#include <stdlib.h>
+#include <string.h>
+#include <sys/ioctl.h>
+#include <ctype.h>
+#include <sys/ipc.h>
+#include <sys/types.h>
+#include <sys/stat.h>
+#include <fcntl.h>
+#include <unistd.h>
+#include "oledtest.h"
+
+#define TRUE	1
+#define FALSE	0
+
+#define DRIVER_NAME		"/dev/cnoled"
+
+#define MODE_WRITE		0
+#define MODE_READ		1
+#define MODE_CMD		2
+#define MODE_RESET		3
+#define MODE_NORMAL		4
+#define MODE_BANG		5
+#define MODE_RIGHT		6
+#define MODE_INIT		7
+
+static  int  fd ;
+
+unsigned long simple_strtoul(char *cp, char **endp,unsigned int base)
+{
+    unsigned long result = 0,value;
+    
+    if (*cp == '0') {
+        cp++;
+        if ((*cp == 'x') && isxdigit(cp[1])) {
+            base = 16;
+            cp++;
+        }
+        if (!base) {
+            base = 8;
+        }
+    }
+    if (!base) {
+        base = 10;
+    }
+    while (isxdigit(*cp) && (value = isdigit(*cp) ? *cp-'0' : (islower(*cp)
+                                                               ? toupper(*cp) : *cp)-'A'+10) < base) {
+        result = result*base + value;
+        cp++;
+    }
+    if (endp)
+        *endp = (char *)cp;
+    return result;
+}
+
+unsigned long read_hex(const char* str){
+    char addr[128];
+    strcpy(addr,str);
+    return simple_strtoul(addr, NULL, 16);
+}
+
+#define RST_BIT_MASK	0xEFFF
+#define CS_BIT_MASK		0xF7FF
+#define DC_BIT_MASK		0xFBFF
+#define WD_BIT_MASK		0xFDFF
+#define RD_BIT_MASK		0xFEFF
+#define DEFAULT_MASK	0xFFFF
+
+
+#define CMD_SET_COLUMN_ADDR		0x15
+#define CMD_SET_ROW_ADDR		0x75
+#define CMD_WRITE_RAM			0x5C
+#define CMD_READ_RAM			0x5D
+#define CMD_LOCK				0xFD
+
+int reset(void)
+{
+    unsigned short wdata ;
+    
+    wdata = RST_BIT_MASK;
+    write(fd,&wdata , 2 );
+    usleep(2000);
+    wdata = DEFAULT_MASK;
+    write(fd,&wdata , 2 );
+    return TRUE;
+}
+
+int writeCmd(int size , unsigned short* cmdArr)
+{
+    int i ;
+    unsigned short wdata;
+    
+    
+    wdata = CS_BIT_MASK & DC_BIT_MASK;
+    write(fd,&wdata,2);
+    
+    wdata = CS_BIT_MASK & DC_BIT_MASK & WD_BIT_MASK ;
+    write(fd,&wdata,2);
+    
+    wdata = CS_BIT_MASK & DC_BIT_MASK & WD_BIT_MASK & (cmdArr[0]|0xFF00) ;
+    write(fd,&wdata,2);
+    
+    wdata = CS_BIT_MASK & DC_BIT_MASK & (cmdArr[0] | 0xFF00) ;
+    write(fd,&wdata,2);
+    
+    wdata = CS_BIT_MASK & ( cmdArr[0] | 0xFF00);
+    write(fd,&wdata,2);
+    
+    for (i = 1; i < size ; i++ )
+    {
+        
+        wdata = CS_BIT_MASK & WD_BIT_MASK ;
+        write(fd,&wdata,2);
+        
+        wdata = CS_BIT_MASK & WD_BIT_MASK & (cmdArr[i] | 0xFF00) ;
+        write(fd,&wdata,2);
+        
+        wdata = CS_BIT_MASK & (cmdArr[i] | 0xFF00);
+        write(fd,&wdata,2);
+        
+    }
+    wdata= DEFAULT_MASK;
+    write(fd,&wdata,2);
+    
+    return TRUE;
+}
+
+int writeData(int size , unsigned char* dataArr)
+{
+    int i ;
+    unsigned short wdata;
+    
+    wdata = CS_BIT_MASK & DC_BIT_MASK;
+    write(fd,&wdata,2);
+    
+    wdata = CS_BIT_MASK & DC_BIT_MASK & WD_BIT_MASK & (CMD_WRITE_RAM | 0xFF00) ;
+    write(fd,&wdata,2);
+    
+    wdata = CS_BIT_MASK & DC_BIT_MASK & (CMD_WRITE_RAM | 0xFF00);
+    write(fd,&wdata,2);
+    
+    wdata = CS_BIT_MASK &  (CMD_WRITE_RAM | 0xFF00);
+    write(fd,&wdata,2);
+    
+    for (i = 0; i < size ; i++ )
+    {
+        wdata = CS_BIT_MASK & WD_BIT_MASK ;
+        write(fd,&wdata,2);
+        
+        wdata = CS_BIT_MASK & WD_BIT_MASK & ((unsigned char)dataArr[i] | 0xFF00 );
+        write(fd,&wdata,2);
+        
+        wdata = CS_BIT_MASK & ( (unsigned char)dataArr[i] | 0xFF00);
+        write(fd,&wdata,2);
+        
+        
+    }
+    wdata = DEFAULT_MASK;
+    write(fd,&wdata,2);
+    
+    return TRUE;
+    
+}
+
+int readData(int size , unsigned short* dataArr)
+{
+    
+    int i ;
+    unsigned short wdata;
+    
+    wdata = CS_BIT_MASK & DC_BIT_MASK;
+    write(fd,&wdata,2);
+    
+    wdata = CS_BIT_MASK & DC_BIT_MASK & ( CMD_READ_RAM| 0xFF00) ;
+    write(fd,&wdata,2);
+    
+    wdata = CS_BIT_MASK & DC_BIT_MASK & WD_BIT_MASK &( CMD_READ_RAM| 0xFF00);
+    write(fd,&wdata,2);
+    
+    wdata = CS_BIT_MASK & DC_BIT_MASK & (CMD_READ_RAM | 0xFF00);
+    write(fd,&wdata,2);
+    
+    wdata = CS_BIT_MASK &  (CMD_READ_RAM | 0xFF00);
+    write(fd,&wdata,2);
+    
+    
+    for (i = 0; i < size ; i++ )
+    {
+        
+        wdata = CS_BIT_MASK ;
+        write(fd,&wdata,2);
+        
+        wdata = CS_BIT_MASK & RD_BIT_MASK ;
+        write(fd,&wdata,2);
+        
+        wdata = CS_BIT_MASK & RD_BIT_MASK ;
+        write(fd,&wdata,2);
+        
+        wdata = CS_BIT_MASK ;
+        write(fd,&wdata,2);
+        
+        read(fd,&dataArr[i],2);
+        
+    }
+    wdata = DEFAULT_MASK;
+    write(fd,&wdata ,2);
+    
+    return TRUE;
+}
+
+int setAddressDefalut(void)
+{
+    unsigned short  cmd[3];
+    cmd[0] = CMD_SET_COLUMN_ADDR;
+    cmd[1] = 0;
+    cmd[2] = 127;
+    writeCmd(3,cmd);
+    
+    cmd[0] = CMD_SET_ROW_ADDR;
+    cmd[1] = 0;
+    cmd[2] = 127;
+    writeCmd(3,cmd);
+    
+    return TRUE;
+}
+
+// to send cmd  , must unlock
+int setCmdLock(int bLock)
+{
+    unsigned short  cmd[3];
+    
+    cmd[0] = CMD_LOCK;
+    if (bLock)
+    {
+        cmd[1] = 0x16; // lock
+        writeCmd(2,cmd);
+        
+    }
+    else
+    {
+        cmd[1] = 0x12; // lock
+        writeCmd(2,cmd);
+        
+        cmd[1] = 0xB1;
+        writeCmd(2,cmd);
+    }
+    return TRUE;
+}
+
+
+int imageLoading(char* fileName)
+{
+    int imgfile;
+    unsigned char* data =NULL;
+    int  width , height;
+    
+    imgfile = open(fileName , O_RDONLY );
+    if ( imgfile < 0 )
+    {
+        printf ("imageloading(%s)  file is not exist . err.\n",fileName);
+        return FALSE;
+    }
+    setCmdLock(FALSE);
+    
+    
+    read(imgfile ,&width , sizeof(unsigned char));
+    read(imgfile ,&height , sizeof(unsigned char));
+    
+    data = malloc( 128 * 128 * 3 );
+    
+    read(imgfile, data , 128 * 128 *3 );
+    
+    close(imgfile);
+    
+    writeData(128 * 128 *3 , data );
+    
+    setCmdLock(TRUE);
+    return TRUE;
+}
+
+static unsigned short gamma[64]=
+{
+    0xB8,
+    0x02, 0x03, 0x04, 0x05,
+    0x06, 0x07, 0x08, 0x09,
+    0x0A, 0x0B, 0x0C, 0x0D,
+    0x0E, 0x0F, 0x10, 0x11,
+    0x12, 0x13, 0x15, 0x17,
+    0x19, 0x1B, 0x1D, 0x1F,
+    0x21, 0x23, 0x25, 0x27,
+    0x2A, 0x2D, 0x30, 0x33,
+    0x36, 0x39, 0x3C, 0x3F,
+    0x42, 0x45, 0x48, 0x4C,
+    0x50, 0x54, 0x58, 0x5C,
+    0x60, 0x64, 0x68, 0x6C,
+    0x70, 0x74, 0x78, 0x7D,
+    0x82, 0x87, 0x8C, 0x91,
+    0x96, 0x9B, 0xA0, 0xA5,
+    0xAA, 0xAF, 0xB4
+    
+};
+
+
+int Init(void)
+{
+    unsigned short wdata[10];
+    unsigned char  wcdata[10];
+    int i,j;
+    wdata[0]= 0xFD;
+    wdata[1] = 0x12;
+    writeCmd(2,wdata);
+    
+    
+    wdata[0] = 0xFD;
+    wdata[1] = 0xB1;
+    writeCmd(2, wdata);
+    
+    wdata[0] = 0xAE;
+    writeCmd(2, wdata);
+    
+    wdata[0] = 0xB3;
+    wdata[1] = 0xF1;
+    writeCmd(2, wdata);
+    
+    wdata[0] = 0xCA;
+    wdata[1] = 0x7F;
+    writeCmd(2, wdata);
+    
+    wdata[0] = 0xA2;
+    wdata[1] = 0x00;
+    writeCmd(2, wdata);
+    
+    wdata[0]= 0xA1;
+    wdata[1]=0x00;
+    writeCmd(2, wdata);
+    
+    wdata[0]= 0xA0;
+    wdata[1] = 0xB4;
+    writeCmd(2, wdata);
+    
+    wdata[0] = 0xAB;
+    wdata[1] = 0x01;
+    writeCmd(2, wdata);
+    
+    wdata[0] = 0xB4;
+    wdata[1] = 0xA0;
+    wdata[2] = 0xB5;
+    wdata[3] = 0x55;
+    writeCmd(2, wdata);
+    
+    wdata[0] = 0xC1;
+    wdata[1] = 0xC8;
+    wdata[2] = 0x80;
+    wdata[3] = 0xC8;
+    writeCmd(4, wdata);
+    
+    wdata[0] = 0xC7;
+    wdata[1] = 0x0F;
+    writeCmd(2, wdata);
+    
+    // gamma setting
+    writeCmd(64,gamma);
+    
+    
+    wdata[0] = 0xB1;
+    wdata[1] = 0x32;
+    writeCmd(2,wdata);
+    
+    wdata[0] = 0xB2;
+    wdata[1] = 0xA4;
+    wdata[2] = 0x00;
+    wdata[3] = 0x00;
+    writeCmd(4,wdata);
+    
+    wdata[0] = 0xBB;
+    wdata[1] = 0x17;
+    writeCmd(2,wdata);
+    
+    wdata[0] = 0xB6;
+    wdata[1] = 0x01;
+    writeCmd(2, wdata);
+    
+    wdata[0]= 0xBE;
+    wdata[1] = 0x05;
+    writeCmd(2, wdata);
+    
+    wdata[0] = 0xA6;
+    writeCmd(1,wdata);
+    
+    
+    for (i = 0; i < 128;i++ )
+    {
+        for(j = 0; j < 128; j++ )
+        {
+            wcdata[0]= 0x3F;
+            wcdata[1]= 0;
+            wcdata[2] = 0;
+            writeData(3,wcdata);
+        }
+        
+    }
+    
+    wdata[0] = 0xAF;
+    writeCmd(1,wdata);
+    
+    return TRUE;
+}
+
+
+int openOledDev(){
+    fd = open(DRIVER_NAME, O_RDWR);
+    if (fd < 0)
+    {
+        perror("driver open error.\n");
+        return 1;
+    }
+    else return fd;
+    
+}
+static int Mode;
+
+//main
+int oledtest(int mode)
+{
+    int writeNum;
+    unsigned char wdata[10];
+    int readNum;
+    unsigned short* rdata = NULL;
+    unsigned short wcmd[10];
+   
+    
+    switch ( mode ) 
+    {
+        case 3:
+            reset();
+            break;
+        case 4:
+            imageLoading("normal.img");
+            break;
+        case 7:
+            Init();
+            break;
+    }
+    return 0;
+}
+
